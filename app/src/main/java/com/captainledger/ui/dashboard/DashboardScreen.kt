@@ -17,16 +17,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsOff
-import androidx.compose.material.icons.filled.TrendingDown
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -52,7 +53,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.captainledger.data.model.PaymentMode
 import com.captainledger.data.model.TimeFilter
 import com.captainledger.data.model.TransactionLog
 import com.captainledger.data.model.TransactionType
@@ -66,7 +66,8 @@ import java.util.Locale
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel,
-    onRequestNotificationListenerPermission: () -> Unit
+    onRequestNotificationListenerPermission: () -> Unit,
+    onOpenDebugScreen: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -99,6 +100,13 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onOpenDebugScreen) {
+                        Icon(
+                            imageVector = Icons.Default.BugReport,
+                            contentDescription = "Notification Inspector",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                     IconButton(onClick = onRequestNotificationListenerPermission) {
                         Icon(
                             imageVector = if (uiState.isNotificationListenerEnabled) Icons.Default.NotificationsActive else Icons.Default.NotificationsOff,
@@ -107,7 +115,7 @@ fun DashboardScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
             )
@@ -187,7 +195,7 @@ fun DashboardScreen(
                 MetricCard(
                     title = "Earnings",
                     amount = uiState.summary.totalEarnings,
-                    icon = Icons.Default.TrendingUp,
+                    icon = Icons.AutoMirrored.Filled.TrendingUp,
                     accentColor = Color(0xFF2E7D32),
                     modifier = Modifier.weight(1f)
                 )
@@ -195,7 +203,7 @@ fun DashboardScreen(
                 MetricCard(
                     title = "Expenses",
                     amount = uiState.summary.totalExpenses,
-                    icon = Icons.Default.TrendingDown,
+                    icon = Icons.AutoMirrored.Filled.TrendingDown,
                     accentColor = Color(0xFFC62828),
                     modifier = Modifier.weight(1f)
                 )

@@ -10,16 +10,23 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.captainledger.ui.dashboard.DashboardScreen
 import com.captainledger.ui.dashboard.DashboardViewModel
+import com.captainledger.ui.debug.NotificationDebugScreen
+import com.captainledger.ui.debug.NotificationDebugViewModel
 import com.captainledger.ui.theme.CaptainLedgerTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    private val viewModel: DashboardViewModel by viewModels()
+    private val dashboardViewModel: DashboardViewModel by viewModels()
+    private val debugViewModel: NotificationDebugViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,10 +38,20 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    DashboardScreen(
-                        viewModel = viewModel,
-                        onRequestNotificationListenerPermission = { openNotificationListenerSettings() }
-                    )
+                    var showDebugScreen by remember { mutableStateOf(false) }
+
+                    if (showDebugScreen) {
+                        NotificationDebugScreen(
+                            viewModel = debugViewModel,
+                            onBack = { showDebugScreen = false }
+                        )
+                    } else {
+                        DashboardScreen(
+                            viewModel = dashboardViewModel,
+                            onRequestNotificationListenerPermission = { openNotificationListenerSettings() },
+                            onOpenDebugScreen = { showDebugScreen = true }
+                        )
+                    }
                 }
             }
         }
@@ -51,7 +68,7 @@ class MainActivity : ComponentActivity() {
             "enabled_notification_listeners"
         )
         val isEnabled = enabledListeners?.contains(packageName) == true
-        viewModel.setNotificationListenerStatus(isEnabled)
+        dashboardViewModel.setNotificationListenerStatus(isEnabled)
     }
 
     private fun openNotificationListenerSettings() {

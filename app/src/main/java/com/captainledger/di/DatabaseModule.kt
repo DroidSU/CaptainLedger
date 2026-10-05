@@ -3,6 +3,7 @@ package com.captainledger.di
 import android.content.Context
 import androidx.room.Room
 import com.captainledger.data.local.AppDatabase
+import com.captainledger.data.local.NotificationLogDao
 import com.captainledger.data.local.TransactionDao
 import dagger.Module
 import dagger.Provides
@@ -30,5 +31,10 @@ object DatabaseModule {
     @Provides
     fun provideTransactionDao(appDatabase: AppDatabase): TransactionDao {
         return appDatabase.transactionDao()
+    }
+
+    @Provides
+    fun provideNotificationLogDao(appDatabase: AppDatabase): NotificationLogDao {
+        return appDatabase.notificationLogDao()
     }
 }
