@@ -15,7 +15,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import java.util.regex.Pattern
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -29,27 +28,6 @@ class PaymentNotificationListener : NotificationListenerService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val paymentAmountPattern = Pattern.compile("(?i)(?:₹|rs\\.?|inr)\\s*([\\d,]+(?:\\.\\d{1,2})?)")
-
-    private val targetPackages = setOf(
-        "com.google.android.apps.n2p",
-        "com.phonepe.app",
-        "net.one97.paytm",
-        "in.org.npci.upiapp",
-        "com.whatsapp",
-        "com.icicibank.pockets",
-        "com.sbi.upi",
-        "com.google.android.apps.messaging",
-        "com.samsung.android.messaging",
-        "com.android.mms",
-        "com.hdfcbank.mobilebanking",
-        "com.sbi.lotusintouch",
-        "com.icicibank.mobilebanking",
-        "com.axis.mobile",
-        "com.kotak.mobilebanking",
-        "com.truecaller"
-    )
-
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
         if (sbn == null) return
@@ -62,84 +40,71 @@ class PaymentNotificationListener : NotificationListenerService() {
         val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString().orEmpty()
         val summaryText = extras.getCharSequence(Notification.EXTRA_SUMMARY_TEXT)?.toString().orEmpty()
 
-        val fullContent = "$title $text $bigText $summaryText".trim()
-        if (fullContent.isBlank()) return
+        val parseResult = PaymentNotificationParser.parseNotification(
+            packageName = packageName,
+            title = title,
+            text = text,
+            bigText = bigText,
+            summaryText = summaryText
+        )
 
-        val isTargetApp = targetPackages.contains(packageName) ||
-                packageName.contains("pay", ignoreCase = true) ||
-                packageName.contains("upi", ignoreCase = true) ||
-                packageName.contains("bank", ignoreCase = true) ||
-                packageName.contains("message", ignoreCase = true) ||
-                packageName.contains("sms", ignoreCase = true)
+        if (!parseResult.isTargetApp) return
 
-        if (!isTargetApp) return
+        val amount = parseResult.amount
+        val type = parseResult.type
 
-        val isCreditEvent = fullContent.contains("received", ignoreCase = true) ||
-                fullContent.contains("credited", ignoreCase = true) ||
-                fullContent.contains("added", ignoreCase = true) ||
-                fullContent.contains("sent you", ignoreCase = true) ||
-                fullContent.contains("deposited", ignoreCase = true) ||
-                fullContent.contains("payment from", ignoreCase = true)
+        if (parseResult.isParsedSuccessfully && amount != null && type != null) {
+            val category = if (type == TransactionType.INCOME) "Auto UPI Earnings" else "Auto UPI Expenses"
+            val platformName = parseResult.platform
 
-        val isDebitEvent = fullContent.contains("debited", ignoreCase = true) ||
-                fullContent.contains("paid to", ignoreCase = true) ||
-                fullContent.contains("sent to", ignoreCase = true) ||
-                fullContent.contains("spent", ignoreCase = true)
+            serviceScope.launch {
+                val isDuplicate = repository.isDuplicateTransaction(amount, type)
+                if (isDuplicate) {
+                    Log.d(TAG, "Duplicate $type transaction detected: ₹$amount from $platformName. Skipping auto-log.")
+                    val log = NotificationLog(
+                        packageName = packageName,
+                        title = title,
+                        text = "$text $bigText".trim(),
+                        timestamp = System.currentTimeMillis(),
+                        isParsedSuccessfully = false,
+                        extractedAmount = amount
+                    )
+                    notificationLogDao.insertNotificationLog(log)
+                } else {
+                    val transaction = TransactionLog(
+                        amount = amount,
+                        type = type,
+                        paymentMode = PaymentMode.UPI,
+                        category = category,
+                        platform = platformName,
+                        timestamp = System.currentTimeMillis()
+                    )
+                    repository.addTransaction(transaction)
+                    Log.d(TAG, "Auto-logged UPI $type: ₹$amount from $platformName")
 
-        var extractedAmount: Double? = null
-        var isParsed = false
-
-        if (isCreditEvent && !isDebitEvent) {
-            val matcher = paymentAmountPattern.matcher(fullContent)
-            if (matcher.find()) {
-                val rawAmountStr = matcher.group(1)?.replace(",", "")
-                val amount = rawAmountStr?.toDoubleOrNull()
-
-                if (amount != null && amount > 0) {
-                    extractedAmount = amount
-                    isParsed = true
-                    val platformName = detectPlatformName(packageName, fullContent)
-
-                    serviceScope.launch {
-                        val transaction = TransactionLog(
-                            amount = amount,
-                            type = TransactionType.INCOME,
-                            paymentMode = PaymentMode.UPI,
-                            category = "Auto UPI Earnings",
-                            platform = platformName,
-                            timestamp = System.currentTimeMillis()
-                        )
-                        repository.addTransaction(transaction)
-                        Log.d(TAG, "Auto-logged UPI Income: ₹$amount from $platformName")
-                    }
+                    val log = NotificationLog(
+                        packageName = packageName,
+                        title = title,
+                        text = "$text $bigText".trim(),
+                        timestamp = System.currentTimeMillis(),
+                        isParsedSuccessfully = true,
+                        extractedAmount = amount
+                    )
+                    notificationLogDao.insertNotificationLog(log)
                 }
             }
-        }
-
-        serviceScope.launch {
-            val log = NotificationLog(
-                packageName = packageName,
-                title = title,
-                text = "$text $bigText".trim(),
-                timestamp = System.currentTimeMillis(),
-                isParsedSuccessfully = isParsed,
-                extractedAmount = extractedAmount
-            )
-            notificationLogDao.insertNotificationLog(log)
-        }
-    }
-
-    private fun detectPlatformName(packageName: String, content: String): String {
-        return when {
-            content.contains("Rapido", ignoreCase = true) -> "Rapido"
-            content.contains("Swiggy", ignoreCase = true) -> "Swiggy"
-            content.contains("Uber", ignoreCase = true) -> "Uber"
-            content.contains("Zomato", ignoreCase = true) -> "Zomato"
-            packageName.contains("phonepe", ignoreCase = true) -> "PhonePe"
-            packageName.contains("google", ignoreCase = true) || packageName.contains("n2p", ignoreCase = true) -> "GPay"
-            packageName.contains("paytm", ignoreCase = true) -> "Paytm"
-            packageName.contains("truecaller", ignoreCase = true) -> "Truecaller"
-            else -> "UPI Auto"
+        } else {
+            serviceScope.launch {
+                val log = NotificationLog(
+                    packageName = packageName,
+                    title = title,
+                    text = "$text $bigText".trim(),
+                    timestamp = System.currentTimeMillis(),
+                    isParsedSuccessfully = false,
+                    extractedAmount = amount
+                )
+                notificationLogDao.insertNotificationLog(log)
+            }
         }
     }
 

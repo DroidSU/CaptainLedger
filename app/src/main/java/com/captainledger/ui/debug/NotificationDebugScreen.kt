@@ -29,13 +29,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.captainledger.data.model.NotificationLog
+import com.captainledger.ui.theme.CaptainLedgerTheme
 import com.captainledger.ui.theme.FinancialColors
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -44,12 +44,13 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationDebugScreen(
-    viewModel: NotificationDebugViewModel,
-    onBack: () -> Unit
+    logs: List<NotificationLog>,
+    onClearLogs: () -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val logs by viewModel.logs.collectAsState()
-
     Scaffold(
+        modifier = modifier,
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Notification Inspector", fontWeight = FontWeight.Bold) },
@@ -60,7 +61,7 @@ fun NotificationDebugScreen(
                 },
                 actions = {
                     if (logs.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.clearLogs() }) {
+                        IconButton(onClick = onClearLogs) {
                             Icon(imageVector = Icons.Default.DeleteSweep, contentDescription = "Clear Logs")
                         }
                     }
@@ -212,5 +213,36 @@ private fun NotificationLogItem(log: NotificationLog) {
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun NotificationDebugScreenPreview() {
+    CaptainLedgerTheme {
+        NotificationDebugScreen(
+            logs = listOf(
+                NotificationLog(
+                    id = 1,
+                    packageName = "com.google.android.apps.nbu.paisa.user",
+                    title = "Received ₹500.00",
+                    text = "You received ₹500.00 from John Doe via Google Pay",
+                    timestamp = System.currentTimeMillis(),
+                    isParsedSuccessfully = true,
+                    extractedAmount = 500.0
+                ),
+                NotificationLog(
+                    id = 2,
+                    packageName = "com.phonepe.app",
+                    title = "Payment received",
+                    text = "Received Rs. 1,200 from Jane Smith",
+                    timestamp = System.currentTimeMillis() - 3600000,
+                    isParsedSuccessfully = false,
+                    extractedAmount = null
+                )
+            ),
+            onClearLogs = {},
+            onBack = {}
+        )
     }
 }

@@ -4,6 +4,7 @@ import com.captainledger.data.local.TransactionDao
 import com.captainledger.data.model.TimeFilter
 import com.captainledger.data.model.TransactionLog
 import com.captainledger.data.model.TransactionSummary
+import com.captainledger.data.model.TransactionType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import java.util.Calendar
@@ -51,6 +52,15 @@ class TransactionRepository @Inject constructor(
 
     suspend fun addTransaction(transaction: TransactionLog): Long {
         return transactionDao.insertTransaction(transaction)
+    }
+
+    suspend fun isDuplicateTransaction(
+        amount: Double,
+        type: TransactionType,
+        windowMillis: Long = 120000L
+    ): Boolean {
+        val sinceTimestamp = System.currentTimeMillis() - windowMillis
+        return transactionDao.hasRecentTransaction(amount, type, sinceTimestamp)
     }
 
     suspend fun deleteTransaction(transaction: TransactionLog) {

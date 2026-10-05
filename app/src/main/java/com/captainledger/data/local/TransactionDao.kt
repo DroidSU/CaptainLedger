@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.captainledger.data.model.TransactionLog
+import com.captainledger.data.model.TransactionType
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -34,4 +35,7 @@ interface TransactionDao {
 
     @Query("SELECT SUM(amount) FROM transaction_log WHERE type = 'EXPENSE'")
     fun getTotalExpense(): Flow<Double?>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM transaction_log WHERE amount = :amount AND type = :type AND timestamp >= :sinceTimestamp)")
+    suspend fun hasRecentTransaction(amount: Double, type: TransactionType, sinceTimestamp: Long): Boolean
 }
