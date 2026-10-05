@@ -48,7 +48,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -58,6 +57,7 @@ import com.captainledger.data.model.TransactionLog
 import com.captainledger.data.model.TransactionType
 import com.captainledger.ui.dashboard.components.AddTransactionBottomSheet
 import com.captainledger.ui.dashboard.components.MetricCard
+import com.captainledger.ui.theme.FinancialColors
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -111,7 +111,7 @@ fun DashboardScreen(
                         Icon(
                             imageVector = if (uiState.isNotificationListenerEnabled) Icons.Default.NotificationsActive else Icons.Default.NotificationsOff,
                             contentDescription = "Notification Sync",
-                            tint = if (uiState.isNotificationListenerEnabled) Color(0xFF2E7D32) else Color(0xFFE65100)
+                            tint = if (uiState.isNotificationListenerEnabled) FinancialColors.success else FinancialColors.warning
                         )
                     }
                 },
@@ -139,7 +139,7 @@ fun DashboardScreen(
             if (!uiState.isNotificationListenerEnabled) {
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFFFF3E0),
+                    color = FinancialColors.warningContainer,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
@@ -152,14 +152,14 @@ fun DashboardScreen(
                         Icon(
                             imageVector = Icons.Default.NotificationsOff,
                             contentDescription = null,
-                            tint = Color(0xFFE65100),
+                            tint = FinancialColors.warning,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = "Enable UPI Auto-Log permission for automated earnings tracking.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFFE65100),
+                            color = FinancialColors.warning,
                             fontWeight = FontWeight.Medium
                         )
                     }
@@ -196,7 +196,7 @@ fun DashboardScreen(
                     title = "Earnings",
                     amount = uiState.summary.totalEarnings,
                     icon = Icons.AutoMirrored.Filled.TrendingUp,
-                    accentColor = Color(0xFF2E7D32),
+                    accentColor = FinancialColors.success,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -204,7 +204,7 @@ fun DashboardScreen(
                     title = "Expenses",
                     amount = uiState.summary.totalExpenses,
                     icon = Icons.AutoMirrored.Filled.TrendingDown,
-                    accentColor = Color(0xFFC62828),
+                    accentColor = FinancialColors.expense,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -217,7 +217,7 @@ fun DashboardScreen(
                 title = "Net Profit / Loss",
                 amount = netProfit,
                 icon = Icons.Default.AccountBalanceWallet,
-                accentColor = if (isPositive) Color(0xFF2E7D32) else Color(0xFFC62828),
+                accentColor = if (isPositive) FinancialColors.success else FinancialColors.expense,
                 subtitle = if (isPositive) "Profitable" else "Loss Period",
                 modifier = Modifier.fillMaxWidth()
             )
@@ -300,7 +300,7 @@ private fun TransactionItem(
     onDelete: () -> Unit
 ) {
     val isIncome = transaction.type == TransactionType.INCOME
-    val accentColor = if (isIncome) Color(0xFF2E7D32) else Color(0xFFC62828)
+    val accentColor = if (isIncome) FinancialColors.success else FinancialColors.expense
     val amountPrefix = if (isIncome) "+₹" else "-₹"
     val dateFormat = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault())
     val timeStr = dateFormat.format(Date(transaction.timestamp))

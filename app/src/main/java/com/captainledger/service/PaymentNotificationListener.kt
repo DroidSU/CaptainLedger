@@ -46,7 +46,8 @@ class PaymentNotificationListener : NotificationListenerService() {
         "com.sbi.lotusintouch",
         "com.icicibank.mobilebanking",
         "com.axis.mobile",
-        "com.kotak.mobilebanking"
+        "com.kotak.mobilebanking",
+        "com.truecaller"
     )
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -137,6 +138,7 @@ class PaymentNotificationListener : NotificationListenerService() {
             packageName.contains("phonepe", ignoreCase = true) -> "PhonePe"
             packageName.contains("google", ignoreCase = true) || packageName.contains("n2p", ignoreCase = true) -> "GPay"
             packageName.contains("paytm", ignoreCase = true) -> "Paytm"
+            packageName.contains("truecaller", ignoreCase = true) -> "Truecaller"
             else -> "UPI Auto"
         }
     }

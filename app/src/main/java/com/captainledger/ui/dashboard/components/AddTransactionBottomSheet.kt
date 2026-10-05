@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.captainledger.data.model.PaymentMode
 import com.captainledger.data.model.TransactionType
+import com.captainledger.ui.theme.FinancialColors
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -114,7 +115,7 @@ fun AddTransactionBottomSheet(
                             .weight(1f)
                             .height(40.dp)
                             .background(
-                                color = if (isIncome) Color(0xFF2E7D32) else Color.Transparent,
+                                color = if (isIncome) FinancialColors.success else Color.Transparent,
                                 shape = RoundedCornerShape(10.dp)
                             )
                             .clickable {
@@ -135,7 +136,7 @@ fun AddTransactionBottomSheet(
                             .weight(1f)
                             .height(40.dp)
                             .background(
-                                color = if (!isIncome) Color(0xFFC62828) else Color.Transparent,
+                                color = if (!isIncome) FinancialColors.expense else Color.Transparent,
                                 shape = RoundedCornerShape(10.dp)
                             )
                             .clickable {
@@ -169,7 +170,7 @@ fun AddTransactionBottomSheet(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = if (selectedType == TransactionType.INCOME) Color(0xFF2E7D32) else Color(0xFFC62828)
+                    focusedBorderColor = if (selectedType == TransactionType.INCOME) FinancialColors.success else FinancialColors.expense
                 )
             )
 
@@ -272,7 +273,7 @@ fun AddTransactionBottomSheet(
                     .height(52.dp),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (selectedType == TransactionType.INCOME) Color(0xFF2E7D32) else Color(0xFFC62828)
+                    containerColor = if (selectedType == TransactionType.INCOME) FinancialColors.success else FinancialColors.expense
                 )
             ) {
                 Text(
