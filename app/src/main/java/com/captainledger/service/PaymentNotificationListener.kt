@@ -58,9 +58,39 @@ class PaymentNotificationListener : NotificationListenerService() {
             val platformName = parseResult.platform
 
             serviceScope.launch {
-                val isDuplicate = repository.isDuplicateTransaction(amount, type)
-                if (isDuplicate) {
-                    Log.d(TAG, "Duplicate $type transaction detected: ₹$amount from $platformName. Skipping auto-log.")
+                try {
+                    val isDuplicate = repository.isDuplicateTransaction(amount, type)
+                    if (isDuplicate) {
+                        Log.d(TAG, "Duplicate $type transaction detected: ₹$amount from $platformName. Skipping auto-log and ignoring notification log.")
+                    } else {
+                        val transaction = TransactionLog(
+                            amount = amount,
+                            type = type,
+                            paymentMode = PaymentMode.UPI,
+                            category = category,
+                            platform = platformName,
+                            timestamp = System.currentTimeMillis()
+                        )
+                        repository.addTransaction(transaction)
+                        Log.d(TAG, "Auto-logged UPI $type: ₹$amount from $platformName")
+
+                        val log = NotificationLog(
+                            packageName = packageName,
+                            title = title,
+                            text = "$text $bigText".trim(),
+                            timestamp = System.currentTimeMillis(),
+                            isParsedSuccessfully = true,
+                            extractedAmount = amount
+                        )
+                        notificationLogDao.insertNotificationLog(log)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error processing notification log", e)
+                }
+            }
+        } else {
+            serviceScope.launch {
+                try {
                     val log = NotificationLog(
                         packageName = packageName,
                         title = title,
@@ -70,40 +100,9 @@ class PaymentNotificationListener : NotificationListenerService() {
                         extractedAmount = amount
                     )
                     notificationLogDao.insertNotificationLog(log)
-                } else {
-                    val transaction = TransactionLog(
-                        amount = amount,
-                        type = type,
-                        paymentMode = PaymentMode.UPI,
-                        category = category,
-                        platform = platformName,
-                        timestamp = System.currentTimeMillis()
-                    )
-                    repository.addTransaction(transaction)
-                    Log.d(TAG, "Auto-logged UPI $type: ₹$amount from $platformName")
-
-                    val log = NotificationLog(
-                        packageName = packageName,
-                        title = title,
-                        text = "$text $bigText".trim(),
-                        timestamp = System.currentTimeMillis(),
-                        isParsedSuccessfully = true,
-                        extractedAmount = amount
-                    )
-                    notificationLogDao.insertNotificationLog(log)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error processing notification log", e)
                 }
-            }
-        } else {
-            serviceScope.launch {
-                val log = NotificationLog(
-                    packageName = packageName,
-                    title = title,
-                    text = "$text $bigText".trim(),
-                    timestamp = System.currentTimeMillis(),
-                    isParsedSuccessfully = false,
-                    extractedAmount = amount
-                )
-                notificationLogDao.insertNotificationLog(log)
             }
         }
     }

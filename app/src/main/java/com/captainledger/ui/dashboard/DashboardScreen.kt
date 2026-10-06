@@ -1,5 +1,6 @@
 package com.captainledger.ui.dashboard
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -40,10 +42,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -52,14 +58,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.captainledger.data.model.PaymentMode
 import com.captainledger.data.model.TimeFilter
 import com.captainledger.data.model.TransactionLog
 import com.captainledger.data.model.TransactionType
 import com.captainledger.ui.dashboard.components.AddTransactionBottomSheet
 import com.captainledger.ui.dashboard.components.MetricCard
 import com.captainledger.ui.theme.FinancialColors
-import java.text.SimpleDateFormat
-import java.util.Date
+import com.captainledger.util.DateTimeUtils
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -302,25 +308,75 @@ private fun TransactionItem(
     val isIncome = transaction.type == TransactionType.INCOME
     val accentColor = if (isIncome) FinancialColors.success else FinancialColors.expense
     val amountPrefix = if (isIncome) "+₹" else "-₹"
-    val dateFormat = SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault())
-    val timeStr = dateFormat.format(Date(transaction.timestamp))
 
-    Card(
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-        ),
-        elevation = CardDefaults.cardElevation(0.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+    val dateOrTimeStr = DateTimeUtils.formatDateOrTime(transaction.timestamp)
+
+    val dismissState = rememberSwipeToDismissBoxState(
+        positionalThreshold = { totalWidth -> totalWidth * 0.3f}
+    )
+
+    LaunchedEffect(dismissState.currentValue) {
+        if ((dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) ||
+            (dismissState.currentValue == SwipeToDismissBoxValue.StartToEnd)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            onDelete()
+        }
+    }
+
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            val isSwiping = (dismissState.progress < 0.03f) || (dismissState.targetValue != SwipeToDismissBoxValue.Settled)
+            if (isSwiping) {
+                val alignment = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) {
+                    Alignment.CenterStart
+                } else {
+                    Alignment.CenterEnd
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            shape = RoundedCornerShape(14.dp)
+                        )
+                        .padding(horizontal = 20.dp),
+                    contentAlignment = alignment
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Text(
+                            text = "Delete",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+        }
+    ) {
+        Card(
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            ),
+            elevation = CardDefaults.cardElevation(0.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Surface(
                     shape = CircleShape,
                     color = accentColor.copy(alpha = 0.12f),
@@ -338,16 +394,68 @@ private fun TransactionItem(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.weight(1f, fill = false)
+                        ) {
+                            Text(
+                                text = transaction.category,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            if (transaction.paymentMode == PaymentMode.CASH) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = FinancialColors.warning.copy(alpha = 0.15f)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Payments,
+                                            contentDescription = "Cash",
+                                            tint = FinancialColors.warning,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Text(
+                                            text = "Cash",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = FinancialColors.warning,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
                         Text(
-                            text = transaction.category,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            text = dateOrTimeStr,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Surface(
                             shape = RoundedCornerShape(6.dp),
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
@@ -357,45 +465,23 @@ private fun TransactionItem(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(2.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = timeStr,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "• ${transaction.paymentMode.name}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.SemiBold
+                            text = String.format(Locale.getDefault(), "%s%.2f", amountPrefix, transaction.amount),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = accentColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                }
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = String.format(Locale.getDefault(), "%s%.2f", amountPrefix, transaction.amount),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = accentColor
-                )
-
-                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.size(18.dp)
-                    )
                 }
             }
         }

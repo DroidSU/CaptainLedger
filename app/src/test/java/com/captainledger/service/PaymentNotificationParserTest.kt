@@ -119,6 +119,28 @@ class PaymentNotificationParserTest {
     }
 
     @Test
+    fun `test CaptainLedger mock notification is identified as target app`() {
+        val appPackage = "com.captainledger"
+        assertTrue(PaymentNotificationParser.isTargetApp(appPackage))
+    }
+
+    @Test
+    fun `test CaptainLedger mock debit notification parsing`() {
+        val result = PaymentNotificationParser.parseNotification(
+            packageName = "com.captainledger",
+            title = "₹5",
+            text = "UPI transfer to duttasinc Value 06 from Account 8714",
+            bigText = null,
+            summaryText = null
+        )
+
+        assertTrue(result.isTargetApp)
+        assertTrue(result.isParsedSuccessfully)
+        assertEquals(5.0, result.amount)
+        assertEquals(TransactionType.EXPENSE, result.type)
+    }
+
+    @Test
     fun `test Non target app is ignored`() {
         val result = PaymentNotificationParser.parseNotification(
             packageName = "com.example.unrelatedapp",
@@ -131,5 +153,39 @@ class PaymentNotificationParserTest {
         assertFalse(result.isTargetApp)
         assertFalse(result.isParsedSuccessfully)
         assertNull(result.amount)
+    }
+
+    @Test
+    fun `test Truecaller notification without currency symbol parsing`() {
+        val result = PaymentNotificationParser.parseNotification(
+            packageName = "com.truecaller",
+            title = "Sent 1.00 to John",
+            text = "UPI transfer successful",
+            bigText = null,
+            summaryText = null
+        )
+
+        assertTrue(result.isTargetApp)
+        assertTrue(result.isParsedSuccessfully)
+        assertEquals(1.0, result.amount)
+        assertEquals(TransactionType.EXPENSE, result.type)
+        assertEquals("Truecaller", result.platform)
+    }
+
+    @Test
+    fun `test Truecaller 1 rupee debit transfer parsing`() {
+        val result = PaymentNotificationParser.parseNotification(
+            packageName = "com.truecaller",
+            title = " - ₹1",
+            text = "UPI transfer to duttasinc Value 06 from Account 8714",
+            bigText = null,
+            summaryText = null
+        )
+
+        assertTrue(result.isTargetApp)
+        assertTrue(result.isParsedSuccessfully)
+        assertEquals(1.0, result.amount)
+        assertEquals(TransactionType.EXPENSE, result.type)
+        assertEquals("Truecaller", result.platform)
     }
 }

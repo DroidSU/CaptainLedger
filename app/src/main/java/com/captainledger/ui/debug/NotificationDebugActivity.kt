@@ -34,7 +34,8 @@ class NotificationDebugActivity : ComponentActivity() {
                     NotificationDebugScreen(
                         logs = logs,
                         onClearLogs = { viewModel.clearLogs() },
-                        onBack = { finish() }
+                        onBack = { finish() },
+                        onSendMockNotification = { title, text -> viewModel.sendMockNotification(title, text) }
                     )
                 }
             }

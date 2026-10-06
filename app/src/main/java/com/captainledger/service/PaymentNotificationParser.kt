@@ -19,6 +19,8 @@ object PaymentNotificationParser {
         "com.phonepe.app",
         "net.one97.paytm",
         "in.org.npci.upiapp",
+        "com.whatsapp",
+        "com.whatsapp.w4b",
         "com.icicibank.pockets",
         "com.sbi.upi",
         "com.google.android.apps.messaging",
@@ -29,11 +31,12 @@ object PaymentNotificationParser {
         "com.icicibank.mobilebanking",
         "com.axis.mobile",
         "com.kotak.mobilebanking",
-        "com.truecaller"
+        "com.truecaller",
+        "com.captainledger"
     )
 
     private val paymentAmountPattern = Pattern.compile(
-        "(?i)(?:[+\\-]\\s*)?(?:₹|rs\\.?|inr|rs:?|inr:?)[\\s\\u00A0\\u202F]*([\\d,]+(?:\\.\\d{1,2})?)|([+\\-])\\s*([\\d,]+(?:\\.\\d{1,2})?)"
+        "(?i)(?:[+\\-]\\s*)?(?:₹|rs\\.?|inr|rs:?|inr:?)[\\s\\u00A0\\u202F]*([\\d,]+(?:\\.\\d{1,2})?)|(?:sent|paid|debited|transferred|spent|received|credited)\\s+([\\d,]+(?:\\.\\d{1,2})?)|([\\d,]+(?:\\.\\d{1,2})?)\\s+(?:sent|paid|debited|transferred|spent|received|credited)|([+\\-])\\s*([\\d,]+(?:\\.\\d{1,2})?)"
     )
 
     private val balanceKeywords = listOf(
@@ -50,7 +53,8 @@ object PaymentNotificationParser {
                 lower.contains("bank") ||
                 lower.contains("message") ||
                 lower.contains("sms") ||
-                lower.contains("mms")
+                lower.contains("mms") ||
+                lower.contains("captainledger")
     }
 
     fun buildFullContent(
@@ -72,20 +76,21 @@ object PaymentNotificationParser {
         val creditKeywords = listOf(
             "credited", "received", "added", "sent you", "sent to your",
             "deposited", "payment from", "cashback", "refund", "got ₹",
-            "got rs", "transfer from", "upi transfer from"
+            "got rs", "transfer from", "upi transfer from", "paid you"
         )
 
         val debitKeywords = listOf(
             "debited", "paid to", "spent", "withdrawn",
-            "sent to", "paid ₹", "paid rs", "transfer to", "upi transfer to"
+            "sent to", "paid ₹", "paid rs", "transfer to", "upi transfer to",
+            "sent"
         )
 
         val isExplicitCredit = creditKeywords.any { lower.contains(it) }
         val isExplicitDebit = debitKeywords.any { keyword ->
-            if (keyword == "sent to") {
-                lower.contains("sent to") && !lower.contains("sent to your")
-            } else {
-                lower.contains(keyword)
+            when (keyword) {
+                "sent to" -> lower.contains("sent to") && !lower.contains("sent to your")
+                "sent" -> lower.contains("sent") && !lower.contains("sent you") && !lower.contains("sent to your") && !lower.contains("sent by")
+                else -> lower.contains(keyword)
             }
         }
 
@@ -120,7 +125,7 @@ object PaymentNotificationParser {
             val isBalanceAmount = balanceKeywords.any { keyword -> precedingText.contains(keyword) }
             if (isBalanceAmount) continue
 
-            val rawAmountStr = (matcher.group(1) ?: matcher.group(3))?.replace(",", "")
+            val rawAmountStr = (matcher.group(1) ?: matcher.group(2) ?: matcher.group(3) ?: matcher.group(5))?.replace(",", "")
             val amount = rawAmountStr?.toDoubleOrNull()
             if (amount != null && amount > 0) {
                 return amount
@@ -135,13 +140,14 @@ object PaymentNotificationParser {
 
         return when {
             lowerContent.contains("rapido") -> "Rapido"
-            lowerContent.contains("swiggy" ) -> "Swiggy"
+            lowerContent.contains("swiggy") -> "Swiggy"
             lowerContent.contains("uber") -> "Uber"
             lowerContent.contains("zomato") -> "Zomato"
             lowerPkg.contains("phonepe") -> "PhonePe"
             lowerPkg.contains("google") || lowerPkg.contains("n2p") || lowerPkg.contains("paisa") -> "GPay"
             lowerPkg.contains("paytm") -> "Paytm"
             lowerPkg.contains("truecaller") -> "Truecaller"
+            lowerPkg.contains("whatsapp") -> "WhatsApp"
             else -> "UPI Auto"
         }
     }

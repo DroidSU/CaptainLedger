@@ -5,9 +5,9 @@ import com.captainledger.data.model.TimeFilter
 import com.captainledger.data.model.TransactionLog
 import com.captainledger.data.model.TransactionSummary
 import com.captainledger.data.model.TransactionType
+import com.captainledger.util.DateTimeUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import java.util.Calendar
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -68,23 +68,9 @@ class TransactionRepository @Inject constructor(
     }
 
     private fun getStartTimeForFilter(filter: TimeFilter): Long {
-        val calendar = Calendar.getInstance()
         return when (filter) {
-            TimeFilter.TODAY -> {
-                calendar.set(Calendar.HOUR_OF_DAY, 0)
-                calendar.set(Calendar.MINUTE, 0)
-                calendar.set(Calendar.SECOND, 0)
-                calendar.set(Calendar.MILLISECOND, 0)
-                calendar.timeInMillis
-            }
-            TimeFilter.THIS_WEEK -> {
-                calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
-                calendar.set(Calendar.HOUR_OF_DAY, 0)
-                calendar.set(Calendar.MINUTE, 0)
-                calendar.set(Calendar.SECOND, 0)
-                calendar.set(Calendar.MILLISECOND, 0)
-                calendar.timeInMillis
-            }
+            TimeFilter.TODAY -> DateTimeUtils.getStartOfToday()
+            TimeFilter.THIS_WEEK -> DateTimeUtils.getStartOfWeek()
             TimeFilter.ALL -> 0L
         }
     }
