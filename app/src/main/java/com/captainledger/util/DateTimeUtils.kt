@@ -81,4 +81,17 @@ object DateTimeUtils {
             add(Calendar.DAY_OF_MONTH, -daysToSubtract)
         }.timeInMillis
     }
+
+    /**
+     * Returns the timestamp for the start of the current month (1st day, 00:00:00.000).
+     */
+    fun getStartOfMonth(): Long {
+        return Calendar.getInstance().apply {
+            set(Calendar.DAY_OF_MONTH, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+    }
 }

@@ -1,6 +1,8 @@
 package com.captainledger.data.model
 
 enum class PaymentMode {
+    UPI,
     CASH,
-    UPI
+    CARD,
+    BANK
 }

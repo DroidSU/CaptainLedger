@@ -8,7 +8,6 @@ import com.captainledger.data.local.NotificationLogDao
 import com.captainledger.data.model.NotificationLog
 import com.captainledger.data.model.PaymentMode
 import com.captainledger.data.model.TransactionLog
-import com.captainledger.data.model.TransactionType
 import com.captainledger.data.repository.TransactionRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -54,8 +53,9 @@ class PaymentNotificationListener : NotificationListenerService() {
         val type = parseResult.type
 
         if (parseResult.isParsedSuccessfully && amount != null && type != null) {
-            val category = if (type == TransactionType.INCOME) "Auto UPI Earnings" else "Auto UPI Expenses"
+            val fullContent = PaymentNotificationParser.buildFullContent(title, text, bigText, summaryText)
             val platformName = parseResult.platform
+            val category = PaymentNotificationParser.detectCategory(type, platformName, fullContent)
 
             serviceScope.launch {
                 try {

@@ -58,11 +58,15 @@ fun AddTransactionBottomSheet(
     var amountText by remember { mutableStateOf("") }
     var selectedPaymentMode by remember { mutableStateOf(PaymentMode.UPI) }
 
-    val platforms = remember { listOf("Rapido", "Swiggy", "Uber", "Zomato", "Porter", "Personal") }
-    var selectedPlatform by remember { mutableStateOf("Rapido") }
+    val platforms = remember { listOf("GPay", "PhonePe", "Paytm", "Bank", "Rapido", "Swiggy", "Zomato", "Uber", "Personal") }
+    var selectedPlatform by remember { mutableStateOf("GPay") }
 
-    val incomeCategories = remember { listOf("Rides", "Deliveries", "Bonus", "Tips", "Other") }
-    val expenseCategories = remember { listOf("Petrol", "Maintenance", "Food", "Challan", "Phone", "Misc") }
+    val incomeCategories = remember {
+        listOf("Salary", "Freelance", "Investments", "Rental", "Gifts", "Rides / Deliveries", "Other")
+    }
+    val expenseCategories = remember {
+        listOf("Groceries", "Food & Dining", "Bills & Utilities", "Rent", "Shopping", "Transport & Fuel", "Friends & Family", "Transfer / P2P", "Health", "Entertainment", "Misc")
+    }
 
     val activeCategories = if (selectedType == TransactionType.INCOME) incomeCategories else expenseCategories
     var selectedCategory by remember { mutableStateOf(activeCategories.first()) }

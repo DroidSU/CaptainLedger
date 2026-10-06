@@ -152,6 +152,24 @@ object PaymentNotificationParser {
         }
     }
 
+    fun detectCategory(type: TransactionType, platform: String, content: String): String {
+        val lower = content.lowercase()
+        if (type == TransactionType.INCOME) {
+            return when (platform) {
+                "Rapido", "Swiggy", "Zomato", "Uber" -> "Rides / Deliveries"
+                else -> "UPI Income"
+            }
+        } else {
+            return when {
+                platform in listOf("Swiggy", "Zomato") || lower.contains("restaurant") || lower.contains("cafe") || lower.contains("hotel") -> "Food & Dining"
+                platform in listOf("Rapido", "Uber") || lower.contains("petrol") || lower.contains("fuel") -> "Transport & Fuel"
+                lower.contains("blinkit") || lower.contains("zepto") || lower.contains("dmart") || lower.contains("bigbasket") || lower.contains("grocery") -> "Groceries"
+                lower.contains("recharge") || lower.contains("bill") || lower.contains("electricity") || lower.contains("broadband") -> "Bills & Utilities"
+                else -> "Friends & Family"
+            }
+        }
+    }
+
     fun parseNotification(
         packageName: String,
         title: String?,

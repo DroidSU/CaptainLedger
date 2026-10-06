@@ -24,27 +24,34 @@ class DashboardViewModel @Inject constructor(
     private val repository: TransactionRepository
 ) : ViewModel() {
 
-    private val _selectedFilter = MutableStateFlow(TimeFilter.TODAY)
+    private val _selectedFilter = MutableStateFlow(TimeFilter.THIS_MONTH)
     private val _isNotificationListenerEnabled = MutableStateFlow(false)
     private val _showAddBottomSheet = MutableStateFlow(false)
+    private val _showEditBudgetDialog = MutableStateFlow(false)
 
     val uiState: StateFlow<DashboardUiState> = combine(
         _selectedFilter,
         _isNotificationListenerEnabled,
-        _showAddBottomSheet
-    ) { filter, listenerEnabled, showSheet ->
-        Triple(filter, listenerEnabled, showSheet)
-    }.flatMapLatest { (filter, listenerEnabled, showSheet) ->
+        _showAddBottomSheet,
+        _showEditBudgetDialog,
+        repository.monthlyBudget
+    ) { filter, listenerEnabled, showSheet, showBudgetDialog, budget ->
+        BudgetStateHolder(filter, listenerEnabled, showSheet, showBudgetDialog, budget)
+    }.flatMapLatest { stateHolder ->
         combine(
-            repository.getSummary(filter),
-            repository.getTransactions(filter)
-        ) { summary, transactions ->
+            repository.getSummary(stateHolder.filter),
+            repository.getTransactions(stateHolder.filter),
+            repository.getCurrentMonthExpenses()
+        ) { summary, transactions, monthExpenses ->
             DashboardUiState(
                 summary = summary,
-                selectedFilter = filter,
+                selectedFilter = stateHolder.filter,
                 transactions = transactions,
-                isNotificationListenerEnabled = listenerEnabled,
-                showAddBottomSheet = showSheet
+                isNotificationListenerEnabled = stateHolder.listenerEnabled,
+                showAddBottomSheet = stateHolder.showSheet,
+                monthlyBudget = stateHolder.budget,
+                currentMonthExpenses = monthExpenses,
+                showEditBudgetDialog = stateHolder.showBudgetDialog
             )
         }
     }.stateIn(
@@ -67,6 +74,19 @@ class DashboardViewModel @Inject constructor(
 
     fun onDismissBottomSheet() {
         _showAddBottomSheet.value = false
+    }
+
+    fun onEditBudgetClick() {
+        _showEditBudgetDialog.value = true
+    }
+
+    fun onDismissBudgetDialog() {
+        _showEditBudgetDialog.value = false
+    }
+
+    fun saveMonthlyBudget(amount: Double) {
+        repository.setMonthlyBudget(amount)
+        _showEditBudgetDialog.value = false
     }
 
     fun saveTransaction(
@@ -94,4 +114,12 @@ class DashboardViewModel @Inject constructor(
             repository.deleteTransaction(transaction)
         }
     }
+
+    private data class BudgetStateHolder(
+        val filter: TimeFilter,
+        val listenerEnabled: Boolean,
+        val showSheet: Boolean,
+        val showBudgetDialog: Boolean,
+        val budget: Double
+    )
 }
